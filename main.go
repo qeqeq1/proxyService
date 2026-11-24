@@ -378,11 +378,12 @@ func (s *proxyServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 	started := time.Now()
 	outcome := "ok"
 	host := ""
+	targetPath := ""
 	status := 0
 	flagged := false
 	defer func() {
 		if s.metrics != nil {
-			s.metrics.observe(outcome, host, status, time.Since(started), flagged)
+			s.metrics.observe(outcome, host, targetPath, status, time.Since(started), flagged)
 		}
 	}()
 
@@ -436,6 +437,7 @@ func (s *proxyServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	host = strings.ToLower(targetURL.Hostname())
+	targetPath = targetURL.Path
 
 	var bodyBytes []byte
 	if envelope.BodyBase64 != nil && *envelope.BodyBase64 != "" {
@@ -486,15 +488,20 @@ func (s *proxyServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	status = response.StatusCode
-	// 登录页 / 冻结页 / 403 / 429 都算「上游不认这张会话」，后台据此判断是否被拉黑。
-	flagged = detectUpstreamFlag(status, response.Body, targetURL)
+	// 只有「冻结/拦截 + 出口 IP」的冻结页才算被风控；403/429 与登录页都另有归类。
+	flagged = detectFrozenPage(response.Body)
 	switch {
+	case flagged:
+		outcome = "upstream_blocked"
 	case status >= 500:
 		outcome = "upstream_5xx"
 	case status == http.StatusForbidden || status == http.StatusTooManyRequests:
 		outcome = "upstream_blocked"
 	case status >= 400:
 		outcome = "upstream_4xx"
+	case isLoginPageHTML(response.Body) && !isAuthserverTarget(targetURL):
+		// 业务页跳回登录页：会话失效，需要重新登录，但不是风控。
+		outcome = "session_required"
 	default:
 		outcome = "ok"
 	}

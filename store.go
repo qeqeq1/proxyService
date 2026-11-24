@@ -266,6 +266,12 @@ func (s *sessionStore) open(data []byte) ([]byte, error) {
 }
 
 func earliestExpiry(cookies []storedCookie, now time.Time) int64 {
+	// CASTGC 才代表凭据本身的寿命，优先用它。
+	for _, cookie := range cookies {
+		if cookie.Name == "CASTGC" && !cookie.expired(now) && !cookie.Expires.IsZero() {
+			return cookie.Expires.Unix()
+		}
+	}
 	var earliest time.Time
 	for _, cookie := range cookies {
 		if cookie.expired(now) || cookie.Expires.IsZero() {

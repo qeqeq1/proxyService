@@ -130,8 +130,11 @@ func (j *trackingJar) snapshot() []storedCookie {
 func (j *trackingJar) earliestExpiry() time.Time {
 	j.mu.Lock()
 	defer j.mu.Unlock()
+	return j.earliestExpiryLocked(time.Now())
+}
+
+func (j *trackingJar) earliestExpiryLocked(now time.Time) time.Time {
 	var earliest time.Time
-	now := time.Now()
 	for _, cookie := range j.items {
 		if cookie.expired(now) || cookie.Expires.IsZero() {
 			continue
@@ -141,6 +144,23 @@ func (j *trackingJar) earliestExpiry() time.Time {
 		}
 	}
 	return earliest
+}
+
+// credentialExpiry 优先返回 CASTGC 的到期时间。
+//
+// CASTGC 才是「免密登录还能用多久」的依据；JSESSIONID 之类的会话 cookie 没有
+// 过期时间，拿它们算出来的结果要么是空的，要么是别的 cookie 的寿命，容易误导。
+func (j *trackingJar) credentialExpiry() time.Time {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	now := time.Now()
+	for _, cookie := range j.items {
+		if cookie.Name != "CASTGC" || cookie.expired(now) || cookie.Expires.IsZero() {
+			continue
+		}
+		return cookie.Expires
+	}
+	return j.earliestExpiryLocked(now)
 }
 
 func (j *trackingJar) hasCookie(name string) bool {

@@ -159,7 +159,7 @@ func (s *proxyServer) handleAdminSessions(w http.ResponseWriter, r *http.Request
 			RemoteIP:    ip,
 			UserAgent:   userAgent,
 		}
-		if expiry := session.jar.earliestExpiry(); !expiry.IsZero() {
+		if expiry := session.jar.credentialExpiry(); !expiry.IsZero() {
 			row.ExpiresIn = expiry.Sub(now).Truncate(time.Minute).String()
 		}
 		rows = append(rows, row)
@@ -325,6 +325,9 @@ const adminPageHTML = `<!DOCTYPE html>
   .chart h2, h2.sec { font-size: 13px; margin: 0 0 6px; color: #6b6b70; font-weight: 600; }
   .chart svg { width: 100%; height: 92px; display: block; }
   .legend { font-size: 11px; color: #8e8e93; display: flex; gap: 12px; margin-top: 4px; }
+  .pager { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin: 8px 0 2px; font-size: 12px; }
+  .pager button { padding: 4px 10px; }
+  .pager button:disabled { opacity: 0.45; cursor: default; }
   .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
   h2.sec { margin: 20px 0 8px; }
   @media (prefers-color-scheme: dark) {
@@ -352,6 +355,7 @@ const adminPageHTML = `<!DOCTYPE html>
   <thead><tr><th>学号 / 会话</th><th>来源 IP</th><th>UA</th><th>空闲</th><th>Cookie</th><th>登录态</th><th>凭据剩余</th><th>请求</th><th></th></tr></thead>
   <tbody id="rows"><tr><td colspan="9" class="muted">加载中…</td></tr></tbody>
 </table>
+<div class="pager" id="pager"></div>
 
 <div class="charts">
   <div class="chart">
@@ -383,6 +387,12 @@ const adminPageHTML = `<!DOCTYPE html>
   <thead><tr><th>类型</th><th>次数</th></tr></thead>
   <tbody id="outcomes"><tr><td colspan="2" class="muted">暂无数据</td></tr></tbody>
 </table>
+
+<h2 class="sec">最近异常</h2>
+<table>
+  <thead><tr><th>时间</th><th>目标</th><th>路径</th><th>状态</th><th>类型</th></tr></thead>
+  <tbody id="events"><tr><td colspan="5" class="muted">暂无数据</td></tr></tbody>
+</table>
 <script>
 function fmt(sec) {
   if (sec < 60) return sec + " 秒";
@@ -397,6 +407,8 @@ function esc(value) {
 }
 function uaShort(ua) {
   if (!ua) return "—";
+  var app = ua.match(/LiKeCheng\/([\w.]+)/);
+  if (app) return "App " + app[1];
   var match = ua.match(/(Edg|Chrome|Firefox|Safari)\/[\d.]+/);
   var os = /Windows/.test(ua) ? "Win" : /Android/.test(ua) ? "Android"
     : /iPhone|iPad/.test(ua) ? "iOS" : /Mac OS X/.test(ua) ? "macOS"
@@ -483,12 +495,39 @@ async function load() {
       }).join("")
     : '<tr><td colspan="2" class="muted">暂无数据</td></tr>';
 
-  const rows = data.sessions || [];
+  const events = metrics.events || [];
+  document.getElementById("events").innerHTML = events.length
+    ? events.slice(0, 50).map(function (e) {
+        const label = (OUTCOME_LABELS[e.outcome] || e.outcome) + (e.flagged ? " · 需重登" : "");
+        return "<tr><td>" + esc(e.at) + "</td><td>" + esc(e.host) +
+          '</td><td class="ua" title="' + esc(e.path) + '">' + esc(e.path) +
+          "</td><td>" + (e.status || "—") + "</td><td>" + esc(label) + "</td></tr>";
+      }).join("")
+    : '<tr><td colspan="5" class="muted">最近没有异常</td></tr>';
+
+  sessionRows = data.sessions || [];
+  renderSessions();
+}
+
+let sessionRows = [];
+let sessionPage = 0;
+const SESSION_PAGE_SIZE = 20;
+
+function renderSessions() {
   const tbody = document.getElementById("rows");
-  if (!rows.length) {
+  const pager = document.getElementById("pager");
+  const total = sessionRows.length;
+  const pages = Math.max(1, Math.ceil(total / SESSION_PAGE_SIZE));
+  if (sessionPage > pages - 1) sessionPage = pages - 1;
+  if (sessionPage < 0) sessionPage = 0;
+  if (!total) {
     tbody.innerHTML = '<tr><td colspan="9" class="muted">当前没有活跃会话</td></tr>';
-  } else {
-    tbody.innerHTML = rows.map(function (r) {
+    pager.innerHTML = "";
+    return;
+  }
+  const start = sessionPage * SESSION_PAGE_SIZE;
+  const slice = sessionRows.slice(start, start + SESSION_PAGE_SIZE);
+  tbody.innerHTML = slice.map(function (r) {
       const account = r.account
         ? "<strong>" + esc(r.account) + "</strong>"
         : (r.hasLogin ? '<span class="muted">未记录</span>' : '<span class="muted">未登录</span>');
@@ -500,10 +539,14 @@ async function load() {
         '<td class="ua" title="' + esc(r.userAgent || "") + '">' + esc(uaShort(r.userAgent)) + "</td>" +
         "<td>" + fmt(r.idleSeconds) + "</td><td>" + r.cookies + "</td>" +
         "<td>" + (r.hasLogin ? '<span class="tag">已登录</span>' : '<span class="muted">无</span>') +
-        "</td><td>" + (r.expiresIn || "—") + "</td><td>" + r.requests +
+        "</td><td>" + (r.expiresIn || "会话级") + "</td><td>" + r.requests +
         '</td><td><button onclick="kick(\'' + r.id + '\')">' + action + "</button></td></tr>";
     }).join("");
-  }
+  pager.innerHTML = '<span class="muted">第 ' + (sessionPage + 1) + " / " + pages +
+    " 页 · 共 " + total + " 条</span>" +
+    '<button onclick="sessionPage--;renderSessions()"' + (sessionPage === 0 ? " disabled" : "") + ">上一页</button>" +
+    '<button onclick="sessionPage++;renderSessions()"' + (sessionPage >= pages - 1 ? " disabled" : "") + ">下一页</button>";
+}
   document.getElementById("updated").textContent = "更新于 " + new Date().toLocaleTimeString() +
     " · 运行 " + status.uptime + " · 会话 TTL " + status.sessionTtl + " · 凭据 TTL " + status.credentialTtl;
 }
