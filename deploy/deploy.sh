@@ -19,17 +19,26 @@ aarch64 | arm64) goarch="arm64" ;;
 esac
 
 binary="${here}/out/njust-proxy-linux-${goarch}"
-release_url="https://github.com/qeqeq1/proxyService/releases/latest/download/njust-proxy-linux-${goarch}"
+release_path="https://github.com/qeqeq1/proxyService/releases/latest/download/njust-proxy-linux-${goarch}"
 
 if [ ! -f "$binary" ]; then
-	# 优先用 CI 发布的二进制：部署机不需要 Go 工具链。
-	echo "==> 下载 ${release_url}"
 	mkdir -p "${here}/out"
-	if command -v curl >/dev/null 2>&1; then
-		curl -fL --retry 3 --max-time 120 -o "$binary" "$release_url" || rm -f "$binary"
-	elif command -v wget >/dev/null 2>&1; then
-		wget -O "$binary" "$release_url" || rm -f "$binary"
+	echo "==> 下载 njust-proxy-linux-${goarch}（PROXY_MIRROR=${PROXY_MIRROR:-auto}）"
+	# 镜像只是前缀，原样包住 GitHub 的完整 URL；失败会自动换下一个。
+	if [ "${PROXY_MIRROR:-auto}" = "cn" ]; then
+		candidates=("https://ghfast.top/${release_path}" "https://gh-proxy.com/${release_path}" "$release_path")
+	else
+		candidates=("$release_path" "https://ghfast.top/${release_path}" "https://gh-proxy.com/${release_path}")
 	fi
+	for url in "${candidates[@]}"; do
+		echo "    ${url}"
+		if command -v curl >/dev/null 2>&1; then
+			curl -fL --retry 2 --max-time 180 -o "$binary" "$url" && break
+		elif command -v wget >/dev/null 2>&1; then
+			wget -q -O "$binary" "$url" && break
+		fi
+		rm -f "$binary"
+	done
 	[ -f "$binary" ] && chmod +x "$binary"
 fi
 

@@ -2,16 +2,56 @@
 #
 #   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/qeqeq1/proxyService/main/deploy/bootstrap.ps1))) -Origins "https://a.example.com"
 #
-# Parameters are forwarded to deploy.ps1 unchanged.
+# Mainland China networks switch to a mirror automatically. Override with:
+#   $env:PROXY_MIRROR = "cn"      force mirror
+#   $env:PROXY_MIRROR = "github"  force official
+#   $env:PROXY_MIRROR = "auto"    default
 $ErrorActionPreference = "Stop"
 
-$base = if ($env:PROXY_BASE_URL) { $env:PROXY_BASE_URL } else { "https://raw.githubusercontent.com/qeqeq1/proxyService/main/deploy" }
+$mirror = if ($env:PROXY_MIRROR) { $env:PROXY_MIRROR } else { "auto" }
+$useMirror = $mirror -eq "cn"
+
+if ($mirror -eq "auto") {
+    try {
+        $country = (Invoke-RestMethod -UseBasicParsing -TimeoutSec 3 -Uri "https://ipinfo.io/country").Trim()
+        if ($country -eq "CN") {
+            $useMirror = $true
+            if ([Environment]::UserInteractive) {
+                $answer = Read-Host "Detected a mainland China network. Use the mirror for downloads? [Y/n]"
+                if ($answer -match "^[Nn]") { $useMirror = $false }
+            }
+        }
+    } catch {
+        # Country lookup failed: keep the official source, the downloader will still fall back.
+    }
+}
+if ($useMirror) { $env:PROXY_MIRROR = "cn" }
+
+function Get-DeployFile([string]$relative, [string]$outFile) {
+    $github = "https://raw.githubusercontent.com/qeqeq1/proxyService/main/deploy/$relative"
+    $jsdelivr = "https://cdn.jsdelivr.net/gh/qeqeq1/proxyService@main/deploy/$relative"
+    if ($useMirror) {
+        $urls = @("https://ghfast.top/$github", "https://gh-proxy.com/$github", $jsdelivr, $github)
+    } else {
+        $urls = @($github, $jsdelivr, "https://ghfast.top/$github")
+    }
+    foreach ($url in $urls) {
+        try {
+            Invoke-WebRequest -UseBasicParsing -TimeoutSec 60 -Uri $url -OutFile $outFile
+            return
+        } catch {
+            Remove-Item $outFile -ErrorAction SilentlyContinue
+        }
+    }
+    throw "Failed to download $relative (tried $($urls -join ', '))."
+}
+
 $work = Join-Path $env:TEMP ("njust-proxy-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 
 try {
     foreach ($file in @("deploy.ps1", "install.ps1")) {
-        Invoke-WebRequest -UseBasicParsing -Uri "$base/$file" -OutFile (Join-Path $work $file)
+        Get-DeployFile $file (Join-Path $work $file)
     }
     & (Join-Path $work "deploy.ps1") @args
 } finally {

@@ -16,6 +16,16 @@ Windows（管理员 PowerShell）：
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/qeqeq1/proxyService/main/deploy/bootstrap.ps1))) -Origins "https://course.njust.store,https://course-preview.njust.store"
 ```
 
+## 国内网络
+
+中国大陆网络会自动检测并询问是否走镜像；也可以直接用镜像链接：
+
+```bash
+curl -fsSL https://cdn.jsdelivr.net/gh/qeqeq1/proxyService@main/deploy/bootstrap.sh | sudo bash -s -- --origins "https://course.njust.store,https://course-preview.njust.store"
+```
+
+二进制会依次尝试 `https://ghfast.top/https://github.com/...`、`gh-proxy.com`、官方源。强制指定：`PROXY_MIRROR=cn` 或 `PROXY_MIRROR=github`。
+
 `--origins` 是浏览器来源白名单，逗号分隔，默认已填上面两个站点，换域名就改这里。
 
 **留空会怎样**：允许列表为空时，所有带 `Origin` 的请求都会返回 403。浏览器 fetch 一定带 Origin，所以 Web 前端会完全不可用；只有 curl、原生 App 这类不带 Origin 的请求能通过。
