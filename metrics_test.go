@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/url"
 	"testing"
 	"time"
 )
@@ -38,6 +39,18 @@ func TestMetricsSnapshotAggregates(t *testing.T) {
 	}
 }
 
+// 主动登录的请求本身就落在登录页，不能被算成会话被拦。
+func TestDetectUpstreamFlagIgnoresOwnLogin(t *testing.T) {
+	target, _ := url.Parse("https://ids.njust.edu.cn/authserver/login?service=x")
+	if detectUpstreamFlag(200, []byte(`id="pwdEncryptSalt"`), target) {
+		t.Fatal("login page fetched on purpose must not count as blocked")
+	}
+	business, _ := url.Parse("https://bkjw.njust.edu.cn/njlgdx/xskb/xskb_list.do")
+	if !detectUpstreamFlag(200, []byte(`<form action="/authserver/login">`), business) {
+		t.Fatal("a business page bouncing to the login page is a real session failure")
+	}
+}
+
 // 时间序列必须补齐 60 个连续分钟，前端画图才不会错位。
 func TestMetricsSeriesIsContinuous(t *testing.T) {
 	metrics := newMetrics()
@@ -66,7 +79,7 @@ func TestDetectUpstreamFlag(t *testing.T) {
 		{"gbk freeze page", 200, []byte{0xB6, 0xB3, 0xBD, 0xE1}, true},
 	}
 	for _, item := range cases {
-		if got := detectUpstreamFlag(item.status, item.body); got != item.want {
+		if got := detectUpstreamFlag(item.status, item.body, nil); got != item.want {
 			t.Errorf("%s: detectUpstreamFlag = %v, want %v", item.name, got, item.want)
 		}
 	}

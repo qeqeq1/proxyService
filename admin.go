@@ -374,7 +374,7 @@ const adminPageHTML = `<!DOCTYPE html>
 
 <h2 class="sec">上游目标</h2>
 <table>
-  <thead><tr><th>目标</th><th>请求</th><th>异常</th><th>被拦</th><th>最后状态</th><th>最后请求</th></tr></thead>
+  <thead><tr><th>目标</th><th>请求</th><th>异常</th><th title="响应里出现登录页或 403/429 的次数，不代表封 IP">需重登</th><th>最后状态</th><th>最后请求</th></tr></thead>
   <tbody id="targets"><tr><td colspan="6" class="muted">暂无数据</td></tr></tbody>
 </table>
 
@@ -450,7 +450,7 @@ async function load() {
     card("近 60 分钟请求", total) +
     card("错误率", errorRate.toFixed(1) + "%", errorRate >= 20) +
     card("p95 耗时", (latency.p95 || 0) + " ms") +
-    card("上游拦截", metrics.suspected ? "疑似被拉黑" : "正常", metrics.suspected) +
+    card("会话状态", metrics.suspected ? "多次需重登" : "正常", metrics.suspected) +
     card("加密", store.encrypted ? "AES-GCM" : "明文", !store.encrypted);
 
   const series = metrics.series || [];

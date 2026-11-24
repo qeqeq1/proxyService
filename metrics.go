@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"net/url"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -221,7 +223,8 @@ func (m *metrics) snapshot() metricsSnapshot {
 	}
 	sort.Slice(targets, func(a, b int) bool { return targets[a].Requests > targets[b].Requests })
 
-	// 「疑似被拉黑」：最近 5 分钟内出现过 3 次及以上登录页/冻结页/403。
+	// 「多次需重登」：最近 5 分钟内出现过 3 次及以上登录页/冻结页/403。
+	// 这只说明会话反复失效，不表示 IP 被封；主动登录的请求已排除在外。
 	var recentFlagged int
 	cutoff := now.Add(-5 * time.Minute).Unix()
 	for _, bucket := range m.buckets {
@@ -271,7 +274,14 @@ func (m *metrics) latencyLocked() latencyStats {
 // 403/429、登录页特征、或者教务的 GBK 冻结页。
 //
 // 只看状态码和几个固定特征串，不解析用户数据，也不保存响应内容。
-func detectUpstreamFlag(status int, body []byte) bool {
+func detectUpstreamFlag(status int, body []byte, target *url.URL) bool {
+	// 主动登录、验证码探测本来就会落在登录页上，不能算「会话被拦」。
+	if target != nil {
+		host := strings.ToLower(target.Hostname())
+		if host == "ids.njust.edu.cn" && strings.Contains(strings.ToLower(target.Path), "/authserver/") {
+			return false
+		}
+	}
 	if status == 403 || status == 429 {
 		return true
 	}

@@ -487,7 +487,7 @@ func (s *proxyServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	status = response.StatusCode
 	// 登录页 / 冻结页 / 403 / 429 都算「上游不认这张会话」，后台据此判断是否被拉黑。
-	flagged = detectUpstreamFlag(status, response.Body)
+	flagged = detectUpstreamFlag(status, response.Body, targetURL)
 	switch {
 	case status >= 500:
 		outcome = "upstream_5xx"
