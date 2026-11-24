@@ -4,7 +4,21 @@
 
 代理本体是上层的 Go 源码，本目录只放构建与部署相关的东西。
 
-## 一分钟部署
+## 最短路径
+
+```bash
+# Linux：需要时自动构建，然后装 systemd 服务
+sudo ./deploy/deploy.sh --origins "https://course.example.com"
+```
+
+```powershell
+# Windows（管理员 PowerShell）：需要时自动构建，然后注册开机任务
+powershell -ExecutionPolicy Bypass -File .\deploy\deploy.ps1 -Origins "https://course.example.com"
+```
+
+两个入口只做三件事：找二进制（没有就构建）、生成密钥、交给安装脚本。下面的分平台说明是同一套流程的拆解。
+
+## 分步部署
 
 ### Linux（systemd）
 
