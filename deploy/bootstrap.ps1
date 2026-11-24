@@ -31,9 +31,9 @@ function Get-DeployFile([string]$relative, [string]$outFile) {
     $github = "https://raw.githubusercontent.com/qeqeq1/proxyService/main/deploy/$relative"
     $jsdelivr = "https://cdn.jsdelivr.net/gh/qeqeq1/proxyService@main/deploy/$relative"
     if ($useMirror) {
-        $urls = @("https://ghfast.top/$github", "https://gh-proxy.com/$github", $jsdelivr, $github)
+        $urls = @("https://gh-proxy.com/$github", "https://ghfast.top/$github", $jsdelivr, $github)
     } else {
-        $urls = @($github, $jsdelivr, "https://ghfast.top/$github")
+        $urls = @($github, "https://gh-proxy.com/$github", "https://ghfast.top/$github")
     }
     foreach ($url in $urls) {
         try {

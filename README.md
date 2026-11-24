@@ -32,7 +32,7 @@ curl -fsSL https://cdn.jsdelivr.net/gh/qeqeq1/proxyService@main/deploy/bootstrap
 
 ## 装完之后
 
-- 后台：`http://127.0.0.1:8081/__admin__`。密码在首次安装时随机生成，重装不会覆盖；用 `--show-secrets`（Windows `-ShowSecrets`）查看
+- 后台：内网 `http://127.0.0.1:8081/__admin__`，外网 `https://<域名>/__admin__`。部署时加 `--public-host proxy.example.com`（Windows `-PublicHost`），安装提示会直接显示你的域名。密码在首次安装时随机生成，重装不会覆盖；用 `--show-secrets`（Windows `-ShowSecrets`）查看
 - 配置：`/etc/njust-proxy/proxy.env`（Windows `C:\ProgramData\njust-proxy\proxy.env`）
 - 密钥：同目录的 `secrets.env`。**里面的 `PROXY_STORE_KEY` 丢了，凭据库就解不开**，单独离线备份
 

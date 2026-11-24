@@ -14,7 +14,7 @@ sudo ./deploy/deploy.sh --origins "https://你的前端域名"
 powershell -ExecutionPolicy Bypass -File .\deploy\deploy.ps1 -Origins "https://你的前端域名"
 ```
 
-装完后台在 `http://127.0.0.1:8081/__admin__`。密码**首次安装时随机生成**并写进 `secrets.env`，重装不会覆盖；用 `--show-secrets`（Windows `-ShowSecrets`）查看。
+装完会打印两套地址：内网 `http://127.0.0.1:8081/__admin__`，外网 `https://<域名>/__admin__`。部署时加 `--public-host proxy.example.com`（Windows `-PublicHost`）就能让外网地址直接显示你的域名，而不是占位符。密码**首次安装时随机生成**并写进 `secrets.env`，重装不会覆盖；用 `--show-secrets`（Windows `-ShowSecrets`）查看。
 
 ## 国内网络
 

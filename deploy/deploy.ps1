@@ -14,9 +14,9 @@ if (-not (Test-Path $exe)) {
     # PROXY_MIRROR is exported by bootstrap.ps1; standalone runs default to official.
     $useMirror = ($env:PROXY_MIRROR -eq "cn")
     if ($useMirror) {
-        $urls = @("https://ghfast.top/$releasePath", "https://gh-proxy.com/$releasePath", $releasePath)
+        $urls = @("https://gh-proxy.com/$releasePath", "https://ghfast.top/$releasePath", $releasePath)
     } else {
-        $urls = @($releasePath, "https://ghfast.top/$releasePath", "https://gh-proxy.com/$releasePath")
+        $urls = @($releasePath, "https://gh-proxy.com/$releasePath", "https://ghfast.top/$releasePath")
     }
     Write-Host "==> Downloading njust-proxy-windows-amd64.exe (PROXY_MIRROR=$($env:PROXY_MIRROR))"
     New-Item -ItemType Directory -Force -Path (Join-Path $here "out") | Out-Null

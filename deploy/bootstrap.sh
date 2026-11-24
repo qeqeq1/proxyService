@@ -49,9 +49,9 @@ fetch() {
 	local jsdelivr="https://cdn.jsdelivr.net/gh/qeqeq1/proxyService@main/deploy/${file}"
 	local candidates=()
 	if [ "${MIRROR_ACTIVE:-0}" = "1" ]; then
-		candidates=("https://ghfast.top/${github}" "https://gh-proxy.com/${github}" "$jsdelivr" "$github")
+		candidates=("https://gh-proxy.com/${github}" "https://ghfast.top/${github}" "$jsdelivr" "$github")
 	else
-		candidates=("$github" "$jsdelivr" "https://ghfast.top/${github}")
+		candidates=("$github" "https://gh-proxy.com/${github}" "https://ghfast.top/${github}")
 	fi
 	local url
 	for url in "${candidates[@]}"; do

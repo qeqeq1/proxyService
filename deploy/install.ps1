@@ -16,6 +16,7 @@ param(
     [string]$Targets = "*.njust.edu.cn,202.119.0.0/16",
     [string]$Origins = "https://course.njust.store,https://course-preview.njust.store",
     [string]$AdminUser = "admin",
+    [string]$PublicHost = "",
     [string]$Binary = "",
     [switch]$Uninstall,
     [switch]$ShowSecrets
@@ -206,9 +207,19 @@ if (-not (Test-Health)) {
 
 Write-Host ""
 Write-Host "Deployed."
-Write-Host "  Task:    schtasks /Query /TN $TaskName"
-Write-Host "  Panel:   http://127.0.0.1:$Port/__admin__  (user $AdminUser, password $adminPassword)"
-Write-Host "  Config:  $ProxyEnv"
+$lanUrl = "http://127.0.0.1:$Port/__admin__"
+if ($PublicHost) {
+    $wanUrl = "https://$PublicHost/__admin__"
+    $wanNote = "(via TLS reverse proxy)"
+} else {
+    $wanUrl = "https://<your-domain>/__admin__"
+    $wanNote = "(configure a reverse proxy first; the proxy only listens on 127.0.0.1)"
+}
+Write-Host "  Task:      schtasks /Query /TN $TaskName"
+Write-Host "  Panel LAN: $lanUrl"
+Write-Host "  Panel WAN: $wanUrl $wanNote"
+Write-Host "             (user $AdminUser, password $adminPassword)"
+Write-Host "  Config:    $ProxyEnv"
 Write-Host "  Secrets: $SecretsEnv  (ACL restricted to SYSTEM/Administrators)"
 Write-Host "  Store:   $DataDir\proxy-sessions.db"
 Write-Host ""

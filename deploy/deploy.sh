@@ -26,9 +26,9 @@ if [ ! -f "$binary" ]; then
 	echo "==> 下载 njust-proxy-linux-${goarch}（PROXY_MIRROR=${PROXY_MIRROR:-auto}）"
 	# 镜像只是前缀，原样包住 GitHub 的完整 URL；失败会自动换下一个。
 	if [ "${PROXY_MIRROR:-auto}" = "cn" ]; then
-		candidates=("https://ghfast.top/${release_path}" "https://gh-proxy.com/${release_path}" "$release_path")
+		candidates=("https://gh-proxy.com/${release_path}" "https://ghfast.top/${release_path}" "$release_path")
 	else
-		candidates=("$release_path" "https://ghfast.top/${release_path}" "https://gh-proxy.com/${release_path}")
+		candidates=("$release_path" "https://gh-proxy.com/${release_path}" "https://ghfast.top/${release_path}")
 	fi
 	for url in "${candidates[@]}"; do
 		echo "    ${url}"

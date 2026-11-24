@@ -5,6 +5,7 @@
 #   sudo ./deploy/install.sh --port 8081 --targets "*.njust.edu.cn,202.119.0.0/16"
 #   sudo ./deploy/install.sh --origins "https://a.example.com,https://b.example.com"
 #   sudo ./deploy/install.sh --binary ./njust-proxy-linux-amd64
+#   sudo ./deploy/install.sh --public-host proxy.example.com   # 安装提示里打印外网后台地址
 #   sudo ./deploy/install.sh --show-secrets        # 再次查看后台账号与密钥
 #   sudo ./deploy/install.sh --uninstall
 #
@@ -24,6 +25,7 @@ RUN_USER="njust-proxy"
 PORT="8081"
 TARGETS="*.njust.edu.cn,202.119.0.0/16"
 ORIGINS="https://course.njust.store,https://course-preview.njust.store"
+PUBLIC_HOST=""
 ADMIN_USER="admin"
 BINARY=""
 ACTION="install"
@@ -38,6 +40,7 @@ while [ "$#" -gt 0 ]; do
 	--port) PORT="$2"; shift 2 ;;
 	--targets) TARGETS="$2"; shift 2 ;;
 	--origins) ORIGINS="$2"; shift 2 ;;
+	--public-host) PUBLIC_HOST="$2"; shift 2 ;;
 	--admin-user) ADMIN_USER="$2"; shift 2 ;;
 	--binary) BINARY="$2"; shift 2 ;;
 	--uninstall) ACTION="uninstall"; shift ;;
@@ -270,13 +273,23 @@ else
 fi
 
 ADMIN_PASSWORD="$(read_env_value "${CONF_DIR}/secrets.env" PROXY_ADMIN_PASSWORD)"
+LAN_URL="http://127.0.0.1:${PORT}/__admin__"
+if [ -n "$PUBLIC_HOST" ]; then
+	WAN_URL="https://${PUBLIC_HOST}/__admin__"
+	WAN_NOTE="（经 TLS 反代）"
+else
+	WAN_URL="https://<你的域名>/__admin__"
+	WAN_NOTE="（先按下一步配好反代；当前只监听 127.0.0.1，公网 IP 直连打不开）"
+fi
 cat <<EOF
 
 部署完成。
 
   服务：systemctl status ${APP}
   日志：journalctl -u ${APP} -f
-  后台：http://127.0.0.1:${PORT}/__admin__   （用户名 ${ADMIN_USER}，密码 ${ADMIN_PASSWORD}）
+  内网后台：${LAN_URL}
+  外网后台：${WAN_URL} ${WAN_NOTE}
+            （用户名 ${ADMIN_USER}，密码 ${ADMIN_PASSWORD}）
   配置：${CONF_DIR}/proxy.env
   密钥：${CONF_DIR}/secrets.env（0600，root）
   凭据库：${STATE_DIR}/proxy-sessions.db（AES-256-GCM，密钥在 secrets.env）
