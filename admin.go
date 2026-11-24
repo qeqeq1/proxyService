@@ -84,7 +84,12 @@ func (s *proxyServer) handleAdminPage(w http.ResponseWriter, r *http.Request) {
 	if !s.requireAdmin(w, r) {
 		return
 	}
-	if r.URL.Path != "/__admin__" && r.URL.Path != "/__admin__/" {
+	if r.URL.Path == "/__admin__" {
+		// 没有尾斜杠时，页面里的相对路径会解析成 /api/...；补上斜杠再渲染。
+		http.Redirect(w, r, "/__admin__/", http.StatusMovedPermanently)
+		return
+	}
+	if r.URL.Path != "/__admin__/" {
 		// 其余 /__admin__/* 已经由更具体的路由处理；走到这里说明是未知路径。
 		http.NotFound(w, r)
 		return
@@ -430,9 +435,9 @@ const OUTCOME_LABELS = {
 
 async function load() {
   const [status, data, metrics] = await Promise.all([
-    fetch("api/status").then(function (r) { return r.json(); }),
-    fetch("api/sessions").then(function (r) { return r.json(); }),
-    fetch("api/metrics").then(function (r) { return r.json(); })
+    fetch("/__admin__/api/status").then(function (r) { return r.json(); }),
+    fetch("/__admin__/api/sessions").then(function (r) { return r.json(); }),
+    fetch("/__admin__/api/metrics").then(function (r) { return r.json(); })
   ]);
   const store = status.store || {};
   const latency = metrics.latency || {};
@@ -503,11 +508,11 @@ async function load() {
     " · 运行 " + status.uptime + " · 会话 TTL " + status.sessionTtl + " · 凭据 TTL " + status.credentialTtl;
 }
 async function kick(id) {
-  await fetch("api/kick?id=" + encodeURIComponent(id), { method: "POST" });
+  await fetch("/__admin__/api/kick?id=" + encodeURIComponent(id), { method: "POST" });
   load();
 }
 async function purge(minutes) {
-  await fetch("api/purge?older=" + minutes + "m", { method: "POST" });
+  await fetch("/__admin__/api/purge?older=" + minutes + "m", { method: "POST" });
   load();
 }
 load();
