@@ -38,6 +38,36 @@ curl -fsSL https://cdn.jsdelivr.net/gh/qeqeq1/proxyService@main/deploy/bootstrap
 
 升级就是重跑同一条命令；卸载加 `--uninstall`（Windows `-Uninstall`），配置和凭据库会保留。
 
+## 忘记后台密码
+
+密码在 `secrets.env` 里，直接读，或让脚本打印：
+
+```bash
+# Linux
+sudo ./deploy/install.sh --show-secrets
+# 没保留脚本时：
+sudo grep PROXY_ADMIN_PASSWORD /etc/njust-proxy/secrets.env
+```
+
+Windows（管理员）：`install.ps1 -ShowSecrets`，或
+
+```powershell
+Select-String PROXY_ADMIN_PASSWORD C:\ProgramData\njust-proxy\secrets.env
+```
+
+`--show-secrets` 会把 `PROXY_STORE_KEY` 一起打印，那个不要外传。
+
+确实找不回就重置密码，不影响已保存的会话：
+
+```bash
+NEW=$(openssl rand -hex 12)
+sudo sed -i "s|^PROXY_ADMIN_PASSWORD=.*|PROXY_ADMIN_PASSWORD=${NEW}|" /etc/njust-proxy/secrets.env
+sudo systemctl restart njust-proxy
+echo "新密码：${NEW}"
+```
+
+注意：**密码可以重置，存储密钥不行**。`PROXY_STORE_KEY` 一改，旧凭据库全部解不开，所有用户都要重新登录一次。
+
 ## 开发
 
 ```bash

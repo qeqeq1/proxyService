@@ -44,3 +44,23 @@ PROXY_MIRROR=github # 始终官方
 `secrets.env` 里的存储密钥丢了，凭据库就解不开，记得单独备份。
 
 升级就是重跑同一条命令；卸载加 `--uninstall`（Windows `-Uninstall`），配置和凭据库会保留。
+
+## 忘记后台密码
+
+```bash
+sudo ./deploy/install.sh --show-secrets
+# 或直接读
+sudo grep PROXY_ADMIN_PASSWORD /etc/njust-proxy/secrets.env
+```
+
+Windows：`install.ps1 -ShowSecrets`，或 `Select-String PROXY_ADMIN_PASSWORD C://ProgramData//njust-proxy//secrets.env`。
+
+重置密码不影响已保存的会话：
+
+```bash
+NEW=$(openssl rand -hex 12)
+sudo sed -i "s|^PROXY_ADMIN_PASSWORD=.*|PROXY_ADMIN_PASSWORD=${NEW}|" /etc/njust-proxy/secrets.env
+sudo systemctl restart njust-proxy
+```
+
+**密码可以重置，`PROXY_STORE_KEY` 不行**：密钥一换，旧凭据库全部解不开。`--show-secrets` 会把它一起打出来，注意别外传。
