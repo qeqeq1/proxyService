@@ -160,7 +160,22 @@ CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
 		return err
 	}
 	s.db = db
+	// SQLite 按 umask 建库，Linux 下默认 0644：payload 虽然加密，也不该让同机其他用户读到。
+	s.tightenPermissions()
 	return nil
+}
+
+// tightenPermissions 把主库与 WAL/SHM 都压到 0600。
+// 文件可能还没创建（WAL 在首次写入后才出现），不存在就跳过。
+func (s *sessionStore) tightenPermissions() {
+	if s.path == "" {
+		return
+	}
+	for _, suffix := range []string{"", "-wal", "-shm"} {
+		if err := os.Chmod(s.path+suffix, 0o600); err != nil && !errors.Is(err, os.ErrNotExist) {
+			log.Printf("warning: chmod %s failed: %v", s.path+suffix, err)
+		}
+	}
 }
 
 // readLegacy 读取旧版整文件快照；文件本来就是 SQLite 或不存在时返回 nil。
@@ -462,6 +477,7 @@ func (s *sessionStore) flush() error {
 		s.recordError(err)
 		return err
 	}
+	s.tightenPermissions()
 	return nil
 }
 
