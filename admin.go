@@ -510,6 +510,8 @@ async function load() {
 
   sessionRows = data.sessions || [];
   renderSessions();
+  document.getElementById("updated").textContent = "更新于 " + new Date().toLocaleTimeString() +
+    " · 运行 " + status.uptime + " · 会话 TTL " + status.sessionTtl + " · 凭据 TTL " + status.credentialTtl;
 }
 
 let sessionRows = [];
@@ -550,9 +552,6 @@ function renderSessions() {
     " 页 · 共 " + total + " 条</span>" +
     '<button onclick="sessionPage--;renderSessions()"' + (sessionPage === 0 ? " disabled" : "") + ">上一页</button>" +
     '<button onclick="sessionPage++;renderSessions()"' + (sessionPage >= pages - 1 ? " disabled" : "") + ">下一页</button>";
-}
-  document.getElementById("updated").textContent = "更新于 " + new Date().toLocaleTimeString() +
-    " · 运行 " + status.uptime + " · 会话 TTL " + status.sessionTtl + " · 凭据 TTL " + status.credentialTtl;
 }
 async function kick(id) {
   await fetch("/__admin__/api/kick?id=" + encodeURIComponent(id), { method: "POST" });
