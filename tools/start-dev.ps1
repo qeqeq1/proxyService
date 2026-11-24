@@ -20,9 +20,20 @@ if (-not (Test-Path $keyFile)) {
 }
 
 $env:PROXY_STORE_KEY = (Get-Content $keyFile -Raw).Trim()
+
+# Same rule as the real installer: never ship a fixed password.
+$passFile = Join-Path $root "dev-admin-password.txt"
+if (-not (Test-Path $passFile)) {
+    $bytes = New-Object byte[] 12
+    [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+    ($bytes | ForEach-Object { $_.ToString("x2") }) -join "" | Set-Content -Encoding ascii $passFile
+}
+$adminPassword = (Get-Content $passFile -Raw).Trim()
+
 Set-Location $root
+Write-Host "Admin panel: http://127.0.0.1:8099/__admin__  (admin / $adminPassword)"
 
 & $exe --host 127.0.0.1 --port 8099 `
     --allowed-targets "*.njust.edu.cn,202.119.0.0/16" `
     --allowed-origins "http://127.0.0.1:8080,http://localhost:8080" `
-    --admin-user admin --admin-password devpass123
+    --admin-user admin --admin-password $adminPassword
