@@ -328,6 +328,9 @@ const adminPageHTML = `<!DOCTYPE html>
   .pager { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin: 8px 0 2px; font-size: 12px; }
   .pager button { padding: 4px 10px; }
   .pager button:disabled { opacity: 0.45; cursor: default; }
+  .ua-cell { max-width: 280px; }
+  .ua-text { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+  .ua-text.expanded { white-space: normal; word-break: break-all; }
   .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
   h2.sec { margin: 20px 0 8px; }
   @media (prefers-color-scheme: dark) {
@@ -536,7 +539,8 @@ function renderSessions() {
       return "<tr><td>" + account + state +
         '<div class="muted" style="font-size:11px">' + esc(r.id) + "</div></td>" +
         "<td>" + (r.remoteIp ? esc(r.remoteIp) : "—") + "</td>" +
-        '<td class="ua" title="' + esc(r.userAgent || "") + '">' + esc(uaShort(r.userAgent)) + "</td>" +
+        '<td class="ua-cell"><span class="ua-text" title="' + esc(r.userAgent || "") +
+        '" onclick="this.classList.toggle(&#39;expanded&#39;)">' + esc(r.userAgent || "—") + "</span></td>" +
         "<td>" + fmt(r.idleSeconds) + "</td><td>" + r.cookies + "</td>" +
         "<td>" + (r.hasLogin ? '<span class="tag">已登录</span>' : '<span class="muted">无</span>') +
         "</td><td>" + (r.expiresIn || "会话级") + "</td><td>" + r.requests +
