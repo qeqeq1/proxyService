@@ -19,13 +19,27 @@ aarch64 | arm64) goarch="arm64" ;;
 esac
 
 binary="${here}/out/njust-proxy-linux-${goarch}"
+release_url="https://github.com/qeqeq1/proxyService/releases/latest/download/njust-proxy-linux-${goarch}"
+
+if [ ! -f "$binary" ]; then
+	# 优先用 CI 发布的二进制：部署机不需要 Go 工具链。
+	echo "==> 下载 ${release_url}"
+	mkdir -p "${here}/out"
+	if command -v curl >/dev/null 2>&1; then
+		curl -fL --retry 3 --max-time 120 -o "$binary" "$release_url" || rm -f "$binary"
+	elif command -v wget >/dev/null 2>&1; then
+		wget -O "$binary" "$release_url" || rm -f "$binary"
+	fi
+	[ -f "$binary" ] && chmod +x "$binary"
+fi
+
 if [ ! -f "$binary" ]; then
 	if command -v go >/dev/null 2>&1; then
-		echo "==> 未找到现成二进制，先构建 linux/${goarch}"
+		echo "==> 下载失败，改为本地构建 linux/${goarch}"
 		"${here}/build.sh" "linux/${goarch}"
 	else
-		echo "既没有 ${binary}，也没有 Go 工具链。" >&2
-		echo "在有 Go 的机器上执行 ./deploy/build.sh，再把 deploy/out/ 一起传过来。" >&2
+		echo "下载失败，且本机没有 Go 工具链。" >&2
+		echo "确认仓库已有 release，或在本机执行 ./deploy/build.sh 后把 deploy/out/ 传过来。" >&2
 		exit 1
 	fi
 fi
