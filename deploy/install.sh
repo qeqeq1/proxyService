@@ -3,6 +3,7 @@
 #
 #   sudo ./deploy/install.sh                      # 首次部署 / 覆盖升级
 #   sudo ./deploy/install.sh --port 8081 --targets "*.njust.edu.cn,202.119.0.0/16"
+#   sudo ./deploy/install.sh --origins "https://a.example.com,https://b.example.com"
 #   sudo ./deploy/install.sh --binary ./njust-proxy-linux-amd64
 #   sudo ./deploy/install.sh --show-secrets        # 再次查看后台账号与密钥
 #   sudo ./deploy/install.sh --uninstall
@@ -22,7 +23,7 @@ RUN_USER="njust-proxy"
 
 PORT="8081"
 TARGETS="*.njust.edu.cn,202.119.0.0/16"
-ORIGINS=""
+ORIGINS="https://course.njust.store,https://course-preview.njust.store"
 ADMIN_USER="admin"
 BINARY=""
 ACTION="install"
@@ -246,6 +247,18 @@ write_unit
 systemctl daemon-reload
 systemctl enable "$APP" >/dev/null
 systemctl restart "$APP"
+
+if [ -z "$ORIGINS" ]; then
+	cat >&2 <<WARN
+
+注意：没有配置 --origins（浏览器来源白名单）。
+      允许列表为空时，所有带 Origin 的请求都会被 403：浏览器 fetch 一定带 Origin，
+      所以 Web 前端会完全不可用，只有 curl / 原生 App 这类请求能通过。
+      装完后编辑 ${CONF_DIR}/proxy.env 里的 PROXY_ALLOWED_ORIGINS，再执行
+      systemctl restart ${APP}。
+
+WARN
+fi
 
 echo "==> 健康检查"
 if health_check; then

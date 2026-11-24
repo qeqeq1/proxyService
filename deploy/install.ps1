@@ -14,7 +14,7 @@
 param(
     [int]$Port = 8081,
     [string]$Targets = "*.njust.edu.cn,202.119.0.0/16",
-    [string]$Origins = "",
+    [string]$Origins = "https://course.njust.store,https://course-preview.njust.store",
     [string]$AdminUser = "admin",
     [string]$Binary = "",
     [switch]$Uninstall,
@@ -188,6 +188,15 @@ Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger `
     -Settings $settings -User "SYSTEM" -RunLevel Highest -Force | Out-Null
 
 Start-ScheduledTask -TaskName $TaskName
+
+if (-not $Origins) {
+    Write-Host ""
+    Write-Host "WARNING: no -Origins given. The browser origin allow-list is empty," -ForegroundColor Yellow
+    Write-Host "which means every request carrying an Origin header gets 403." -ForegroundColor Yellow
+    Write-Host "Web frontends will not work until PROXY_ALLOWED_ORIGINS is set in $ProxyEnv." -ForegroundColor Yellow
+    Write-Host "curl and native apps (no Origin header) are unaffected." -ForegroundColor Yellow
+    Write-Host ""
+}
 
 Write-Host "==> Health check"
 if (-not (Test-Health)) {
